@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net"
@@ -22,18 +23,28 @@ func NewGetQuoteUsecase(challenger *services.Challenger, quoteProvider *services
 	}
 }
 
-func (u *GetQuoteUsecase) Execute(conn net.Conn) error {
+func (u *GetQuoteUsecase) Execute(ctx context.Context, conn net.Conn) error {
+
+	//
+	// We have two options of processing timeouts here:
+	//	1. start goroutine which waits for ctx.Done() and closes connection
+	//		- it stop execution with error and may have unpredictable behavior
+	//	2. check context after each step manually and stop execution explicitly -
+	//		- which is better than first one, but more wordily
+	//
 
 	//
 	// 1. Challenge client
 	//
-	res, err := u.Challenger.Challenge(conn)
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("timeout befor challange: %w", err)
+	}
+
+	res, err := u.Challenger.Challenge(ctx, conn)
 	if err != nil {
 		return fmt.Errorf("challenging: %w", err)
 	}
-
 	u.Logger.Info("Challenge completed")
-
 	if !res {
 		return fmt.Errorf("chellange failed")
 	}
@@ -41,6 +52,9 @@ func (u *GetQuoteUsecase) Execute(conn net.Conn) error {
 	//
 	// 2. Sending Payload
 	//
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("timeout befor sending payload: %w", err)
+	}
 	quote, err := u.QuoteProvider.GetQuote()
 	if err != nil {
 		return fmt.Errorf("get quote: %w", err)

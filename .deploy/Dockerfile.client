@@ -21,4 +21,4 @@ COPY --from=builder /app/client /client
 WORKDIR /
 
 # Команда для запуска клиента с аргументом
-CMD ["/client"]
+CMD ["/client", "server:4444"]

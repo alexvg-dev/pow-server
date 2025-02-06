@@ -8,6 +8,7 @@ import (
 	"pow-server/internal/config"
 	"pow-server/internal/infrastructure"
 	"pow-server/internal/usecases"
+	"time"
 )
 
 func NewQuotesApp(config *config.Config, usecase *usecases.GetQuoteUsecase, logger *slog.Logger) *QuotesApp {
@@ -66,8 +67,12 @@ func (s *QuotesApp) Start(ctx context.Context) error {
 		go func(curConn net.Conn) {
 			defer curConn.Close()
 
-			// TODO: limit max execution time
-			err := s.GetQuoteUsecase.Execute(curConn)
+			// It will help us to terminate usecase execution if TTL expired
+			//
+			ttlCtx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Cfg.SessionTtlSec)*time.Second)
+			defer cancel()
+
+			err := s.GetQuoteUsecase.Execute(ttlCtx, curConn)
 			if err != nil {
 				s.Logger.Error("Get quote usecase execute", "err", err)
 				return

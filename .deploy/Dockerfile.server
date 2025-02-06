@@ -16,6 +16,7 @@ COPY --from=builder /app/server /server
 
 # Копирование конфигурационного файла
 COPY config/dev.json /config/dev.json
+COPY quotes.txt /quotes.txt
 
 # Копирование .env файла
 COPY .env /.env

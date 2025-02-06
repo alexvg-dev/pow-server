@@ -2,5 +2,6 @@
     "server": {
         "port": 4444
     },
+    "sessionTtlSec": 5,
     "quotesFilePath": "quotes.txt"
 }

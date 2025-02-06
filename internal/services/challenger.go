@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	_ "crypto/sha256"
 	"fmt"
 	"net"
@@ -34,18 +35,27 @@ type Challenger struct {
 	POW         POWVerifier
 }
 
-func (c *Challenger) Challenge(ch net.Conn) (bool, error) {
+func (c *Challenger) Challenge(ctx context.Context, ch net.Conn) (bool, error) {
 
+	if err := ctx.Err(); err != nil {
+		return false, fmt.Errorf("timeout befor Hello request: %w", err)
+	}
 	err := c.WaitHello(ch)
 	if err != nil {
 		return false, err
 	}
 
+	if err := ctx.Err(); err != nil {
+		return false, fmt.Errorf("timeout befor challange: %w", err)
+	}
 	challenge, err := c.SendChallenge(ch)
 	if err != nil {
 		return false, err
 	}
 
+	if err := ctx.Err(); err != nil {
+		return false, fmt.Errorf("timeout befor verification: %w", err)
+	}
 	err = c.VerifyChallenge(ch, challenge)
 	if err != nil {
 		return false, err

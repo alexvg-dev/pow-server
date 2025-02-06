@@ -1,6 +1,7 @@
 package services_test
 
 import (
+	"context"
 	"errors"
 	"net"
 	"pow-server/internal/services"
@@ -108,10 +109,12 @@ func TestChallenger_Challenge(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+
+			ctx := context.TODO()
 			challenger := services.NewChallenger(tt.adapter)
 			challenger.POW = tt.pow
 
-			result, err := challenger.Challenge(nil)
+			result, err := challenger.Challenge(ctx, nil)
 			if (err != nil) != tt.expectError {
 				t.Errorf("expected error: %v, got: %v", tt.expectError, err)
 			}

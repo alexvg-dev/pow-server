@@ -10,6 +10,7 @@ import (
 
 type Config struct {
 	Server         ServerConfig `json:"server"`
+	SessionTtlSec  int          `json:"sessionTtlSec" env:"SESSION_TTL_SEC" default:"10"`
 	QuotesFilePath string       `json:"quotesFilePath" env:"QUOTES_FILE_PATH"`
 }
 
