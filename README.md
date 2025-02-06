@@ -8,8 +8,22 @@ the challenge-response protocol should be used.
 collection of the quotes.
 * Docker file should be provided both for the server and for the client that solves the POW challenge
 
+# PoW
+
+- Challenge-response protocol implemented based on scrypt hashing algorithm.
+- SCRYPT, compared to SHA-256 and Hashcash, is more ASIC-resistant due to memory-hard structure
+
+
 ## Commands:
 
-### Start server:
+### 1. Start server
+````
+make build_server
+make start_server
+````
 
-    make start_server
+### 2. Start client
+````
+make build_client
+make start_client
+````

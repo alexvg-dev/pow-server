@@ -27,6 +27,7 @@ type QuotesApp struct {
 
 func (s *QuotesApp) Start(ctx context.Context) error {
 
+	// TODO: add metrics server
 	tcpServer := infrastructure.NewTcpServer(s.Cfg.Server)
 
 	//
@@ -34,7 +35,7 @@ func (s *QuotesApp) Start(ctx context.Context) error {
 	//
 	err := tcpServer.Start(ctx)
 	if err != nil {
-		s.Logger.Error("Waiting for new connections", err)
+		s.Logger.Error("Waiting for new connections", "err", err)
 	}
 
 	go func() {
@@ -49,6 +50,7 @@ func (s *QuotesApp) Start(ctx context.Context) error {
 	// Handling connections here
 	//
 	for {
+		// TODO: limit max connections by config
 		conn, err := tcpServer.Accept()
 		if errors.Is(err, net.ErrClosed) {
 			s.Logger.Error("Listener closed", "err", err)
@@ -56,7 +58,7 @@ func (s *QuotesApp) Start(ctx context.Context) error {
 		}
 
 		if err != nil {
-			s.Logger.Error("Accept connection", err)
+			s.Logger.Error("Accept connection", "err", err)
 		}
 
 		s.Logger.Info("New connection", "from", conn.RemoteAddr().String())
@@ -64,6 +66,7 @@ func (s *QuotesApp) Start(ctx context.Context) error {
 		go func(curConn net.Conn) {
 			defer curConn.Close()
 
+			// TODO: limit max execution time
 			err := s.GetQuoteUsecase.Execute(curConn)
 			if err != nil {
 				s.Logger.Error("Get quote usecase execute", "err", err)

@@ -1,0 +1,29 @@
+# Этап сборки
+FROM golang:1.23-alpine AS builder
+
+# Копирование исходного кода
+WORKDIR /app
+COPY . .
+
+# Сборка сервера
+RUN go build -o server ./cmd/server/main.go
+
+# Этап запуска
+FROM alpine:latest
+
+# Копирование бинарного файла сервера
+COPY --from=builder /app/server /server
+
+# Копирование конфигурационного файла
+COPY config/dev.json /config/dev.json
+
+# Копирование .env файла
+COPY .env /.env
+
+EXPOSE 4444:4444
+
+# Установка рабочей директории
+WORKDIR /
+
+# Команда для запуска сервера
+CMD ["/server"]

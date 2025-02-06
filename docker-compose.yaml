@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+  server:
+    env_file: .env
+    build:
+      context: .
+      dockerfile: .deploy/Dockerfile.server
+    image: pow-server:latest
+    container_name: pow-server-net
+    restart: always
+    networks:
+      - pow-network
+
+  client:
+    env_file: .env
+    build:
+      context: .
+      dockerfile: .deploy/Dockerfile.client
+    image: pow-client:latest
+    container_name: pow-client-net
+    depends_on:
+      - server
+    links:
+      - server
+    networks:
+      - pow-network
+
+networks:
+  pow-network:
+    driver: bridge

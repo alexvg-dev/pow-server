@@ -1,0 +1,24 @@
+# Этап сборки
+FROM golang:1.23-alpine AS builder
+
+# Установка необходимых инструментов
+RUN apk add --no-cache git
+
+# Копирование исходного кода
+WORKDIR /app
+COPY . .
+
+# Сборка клиента
+RUN go build -o client ./cmd/client/main.go
+
+# Этап запуска
+FROM alpine:latest
+
+# Копирование бинарного файла клиента
+COPY --from=builder /app/client /client
+
+# Установка рабочей директории
+WORKDIR /
+
+# Команда для запуска клиента с аргументом
+CMD ["/client"]
