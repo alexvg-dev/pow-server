@@ -37,26 +37,17 @@ type Challenger struct {
 
 func (c *Challenger) Challenge(ctx context.Context, ch net.Conn) (bool, error) {
 
-	if err := ctx.Err(); err != nil {
-		return false, fmt.Errorf("timeout befor Hello request: %w", err)
-	}
-	err := c.WaitHello(ch)
+	err := c.WaitHello(ctx, ch)
 	if err != nil {
 		return false, err
 	}
 
-	if err := ctx.Err(); err != nil {
-		return false, fmt.Errorf("timeout befor challange: %w", err)
-	}
-	challenge, err := c.SendChallenge(ch)
+	challenge, err := c.SendChallenge(ctx, ch)
 	if err != nil {
 		return false, err
 	}
 
-	if err := ctx.Err(); err != nil {
-		return false, fmt.Errorf("timeout befor verification: %w", err)
-	}
-	err = c.VerifyChallenge(ch, challenge)
+	err = c.VerifyChallenge(ctx, ch, challenge)
 	if err != nil {
 		return false, err
 	}
@@ -64,7 +55,11 @@ func (c *Challenger) Challenge(ctx context.Context, ch net.Conn) (bool, error) {
 	return true, nil
 }
 
-func (c *Challenger) WaitHello(ch net.Conn) error {
+func (c *Challenger) WaitHello(ctx context.Context, ch net.Conn) error {
+
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("timeout befor Hello request: %w", err)
+	}
 
 	buf, err := c.ConnAdapter.Read(ch)
 	if err != nil {
@@ -78,8 +73,12 @@ func (c *Challenger) WaitHello(ch net.Conn) error {
 	return nil
 }
 
-func (c *Challenger) SendChallenge(ch net.Conn) ([]byte, error) {
-	// Генерируем случайный challenge
+func (c *Challenger) SendChallenge(ctx context.Context, ch net.Conn) ([]byte, error) {
+
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("timeout befor challange: %w", err)
+	}
+
 	challenge, err := c.POW.GetChallenge()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate challenge: %w", err)
@@ -93,7 +92,11 @@ func (c *Challenger) SendChallenge(ch net.Conn) ([]byte, error) {
 	return challenge, nil
 }
 
-func (c *Challenger) VerifyChallenge(ch net.Conn, challenge []byte) error {
+func (c *Challenger) VerifyChallenge(ctx context.Context, ch net.Conn, challenge []byte) error {
+
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("timeout befor verification: %w", err)
+	}
 
 	response, err := c.ConnAdapter.Read(ch)
 	if err != nil {

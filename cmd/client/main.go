@@ -12,7 +12,7 @@ import (
 
 const (
 	PoWDifficulty = 2 // Количество нулей в начале хэша
-	ClientsNumber = 5
+	ClientsNumber = 8
 )
 
 func main() {

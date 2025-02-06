@@ -35,6 +35,9 @@ func NewScryptPow(difficulty uint) *ScryptPow {
 
 func (pow *ScryptPow) GetChallenge() ([]byte, error) {
 	challenge := make([]byte, ChallengeSize)
+
+	// Random challenge is good enough against reply-attacks
+	// But it can be enhanced by extending length of challenge or adding timestamp
 	_, err := rand.Read(challenge)
 	if err != nil {
 		return nil, ErrCantGenerateChallenge

@@ -13,17 +13,19 @@ import (
 
 func NewQuotesApp(config *config.Config, usecase *usecases.GetQuoteUsecase, logger *slog.Logger) *QuotesApp {
 	return &QuotesApp{
-		GetQuoteUsecase: usecase,
-		Cfg:             config,
-		Logger:          logger,
+		GetQuoteUsecase:    usecase,
+		Cfg:                config,
+		Logger:             logger,
+		ConnectionsLimiter: make(chan struct{}, config.Server.MaxConnections),
 	}
 }
 
 type QuotesApp struct {
-	Logger          *slog.Logger
-	Cfg             *config.Config
-	TcpSrv          infrastructure.TcpServer
-	GetQuoteUsecase *usecases.GetQuoteUsecase
+	Logger             *slog.Logger
+	Cfg                *config.Config
+	TcpSrv             infrastructure.TcpServer
+	GetQuoteUsecase    *usecases.GetQuoteUsecase
+	ConnectionsLimiter chan struct{}
 }
 
 func (s *QuotesApp) Start(ctx context.Context) error {
@@ -48,14 +50,17 @@ func (s *QuotesApp) Start(ctx context.Context) error {
 	}()
 
 	//
-	// Handling connections here
+	// Handling new connections here
 	//
 	for {
-		// TODO: limit max connections by config
+
+		// It will be blocked until buffer if full
+		s.ConnectionsLimiter <- struct{}{}
+
 		conn, err := tcpServer.Accept()
 		if errors.Is(err, net.ErrClosed) {
 			s.Logger.Error("Listener closed", "err", err)
-			return nil
+			return err
 		}
 
 		if err != nil {
@@ -66,6 +71,9 @@ func (s *QuotesApp) Start(ctx context.Context) error {
 
 		go func(curConn net.Conn) {
 			defer curConn.Close()
+			defer func() {
+				<-s.ConnectionsLimiter
+			}()
 
 			// It will help us to terminate usecase execution if TTL expired
 			//

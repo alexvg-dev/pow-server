@@ -1,6 +1,7 @@
 {
     "server": {
-        "port": 4444
+        "port": 4444,
+        "maxConnections": 5
     },
     "sessionTtlSec": 5,
     "quotesFilePath": "quotes.txt"

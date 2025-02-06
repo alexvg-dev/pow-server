@@ -15,7 +15,8 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port int `json:"port" env:"SERVER_PORT"`
+	Port           int `json:"port" env:"SERVER_PORT"`
+	MaxConnections int `json:"maxConnections" env:"MAX_CONNECTIONS" default:"5"`
 }
 
 func GetConfig() (*Config, error) {
