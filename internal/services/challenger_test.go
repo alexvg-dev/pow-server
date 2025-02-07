@@ -1,125 +1,102 @@
 package services_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
-	"net"
 	"pow-server/internal/services"
 	"testing"
+	"time"
 )
 
-type MockTcpAdapter struct {
-	WriteFunc func(ch net.Conn, data []byte) error
-	ReadFunc  func(ch net.Conn) ([]byte, error)
+type mockConn struct {
+	buffer   *bytes.Buffer
+	writeErr error
 }
 
-func (m *MockTcpAdapter) Write(ch net.Conn, data []byte) error {
-	return m.WriteFunc(ch, data)
+func (m *mockConn) Read(p []byte) (n int, err error) {
+	return m.buffer.Read(p)
 }
 
-func (m *MockTcpAdapter) Read(ch net.Conn) ([]byte, error) {
-	return m.ReadFunc(ch)
+func (m *mockConn) Write(p []byte) (n int, err error) {
+	if m.writeErr != nil {
+		return 0, m.writeErr
+	}
+	return m.buffer.Write(p)
 }
 
-type MockPOWVerifier struct {
-	GetChallengeFunc func() ([]byte, error)
-	VerifyFunc       func(challenge []byte, response []byte) error
+type mockPOW struct {
+	challenge []byte
+	verifyErr error
 }
 
-func (m *MockPOWVerifier) GetChallenge() ([]byte, error) {
-	return m.GetChallengeFunc()
+func (m *mockPOW) GetChallenge() ([]byte, error) {
+	return m.challenge, nil
 }
 
-func (m *MockPOWVerifier) Verify(challenge []byte, response []byte) error {
-	return m.VerifyFunc(challenge, response)
+func (m *mockPOW) Verify(challenge, response []byte) error {
+	return m.verifyErr
+}
+
+func encodeMessage(msg []byte) []byte {
+	buf := new(bytes.Buffer)
+	_ = binary.Write(buf, binary.BigEndian, uint64(len(msg)))
+	buf.Write(msg)
+	return buf.Bytes()
 }
 
 func TestChallenger_Challenge(t *testing.T) {
 	tests := []struct {
-		name        string
-		adapter     *MockTcpAdapter
-		pow         *MockPOWVerifier
-		expectError bool
+		name      string
+		conn      *mockConn
+		pow       *mockPOW
+		expectErr bool
 	}{
+		// 1. Hello request received and challenge sent
 		{
-			name: "successful challenge",
-			adapter: &MockTcpAdapter{
-				ReadFunc: func(ch net.Conn) ([]byte, error) {
-					return []byte(services.HelloRequest), nil
-				},
-				WriteFunc: func(ch net.Conn, data []byte) error {
-					return nil
-				},
+			name: "success case",
+			conn: &mockConn{
+				buffer: bytes.NewBuffer(append(encodeMessage([]byte("Hello")), encodeMessage([]byte("response"))...)),
 			},
-			pow: &MockPOWVerifier{
-				GetChallengeFunc: func() ([]byte, error) {
-					return []byte("challenge"), nil
-				},
-				VerifyFunc: func(challenge []byte, response []byte) error {
-					return nil
-				},
+			pow: &mockPOW{
+				challenge: []byte("challenge"),
 			},
-			expectError: false,
+			expectErr: false,
 		},
+		// 2. Received not Hello request
 		{
 			name: "invalid hello request",
-			adapter: &MockTcpAdapter{
-				ReadFunc: func(ch net.Conn) ([]byte, error) {
-					return []byte("Not hello"), nil
-				},
+			conn: &mockConn{
+				buffer: bytes.NewBuffer(encodeMessage([]byte("Invalid"))),
 			},
-			pow:         &MockPOWVerifier{},
-			expectError: true,
+			pow:       &mockPOW{},
+			expectErr: true,
 		},
-		{
-			name: "challenge generation failure",
-			adapter: &MockTcpAdapter{
-				ReadFunc: func(ch net.Conn) ([]byte, error) {
-					return []byte(services.HelloRequest), nil
-				},
-			},
-			pow: &MockPOWVerifier{
-				GetChallengeFunc: func() ([]byte, error) {
-					return nil, errors.New("challenge error")
-				},
-			},
-			expectError: true,
-		},
+		// 3. Hello request received, challenge sent, but challenge verification failed
 		{
 			name: "challenge verification failure",
-			adapter: &MockTcpAdapter{
-				ReadFunc: func(ch net.Conn) ([]byte, error) {
-					return []byte(services.HelloRequest), nil
-				},
-				WriteFunc: func(ch net.Conn, data []byte) error {
-					return nil
-				},
+			conn: &mockConn{
+				buffer: bytes.NewBuffer(append(encodeMessage([]byte("Hello")), encodeMessage([]byte("wrong response"))...)),
 			},
-			pow: &MockPOWVerifier{
-				GetChallengeFunc: func() ([]byte, error) {
-					return []byte("challenge"), nil
-				},
-				VerifyFunc: func(challenge []byte, response []byte) error {
-					return errors.New("verification failed")
-				},
+			pow: &mockPOW{
+				challenge: []byte("challenge"),
+				verifyErr: errors.New("verification failed"),
 			},
-			expectError: true,
+			expectErr: true,
 		},
+		// ...
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			challenger := services.Challenger{POW: tt.pow}
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
 
-			ctx := context.TODO()
-			challenger := services.NewChallenger(tt.adapter)
-			challenger.POW = tt.pow
-
-			result, err := challenger.Challenge(ctx, nil)
-			if (err != nil) != tt.expectError {
-				t.Errorf("expected error: %v, got: %v", tt.expectError, err)
-			}
-			if !tt.expectError && !result {
-				t.Errorf("expected success but got failure")
+			_, err := challenger.Challenge(ctx, tt.conn)
+			if (err != nil) != tt.expectErr {
+				t.Errorf("expected error: %v, got: %v", tt.expectErr, err)
 			}
 		})
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	_ "crypto/sha256"
 	"fmt"
-	"net"
 	"pow-server/pkg/pow"
 	"pow-server/pkg/tcp_codec"
 )
@@ -20,22 +19,21 @@ func NewChallenger() *Challenger {
 	}
 }
 
+type ReadWriteConn interface {
+	Read(b []byte) (n int, err error)
+	Write(b []byte) (n int, err error)
+}
+
 type POWVerifier interface {
 	GetChallenge() ([]byte, error)
 	Verify(challenge []byte, response []byte) error
 }
 
-type ITcpAdapter interface {
-	Write(ch net.Conn, data []byte) error
-	Read(ch net.Conn) ([]byte, error)
-}
-
 type Challenger struct {
-	ConnAdapter ITcpAdapter
-	POW         POWVerifier
+	POW POWVerifier
 }
 
-func (c *Challenger) Challenge(ctx context.Context, ch net.Conn) (bool, error) {
+func (c *Challenger) Challenge(ctx context.Context, ch ReadWriteConn) (bool, error) {
 
 	err := c.WaitHello(ctx, ch)
 	if err != nil {
@@ -55,7 +53,7 @@ func (c *Challenger) Challenge(ctx context.Context, ch net.Conn) (bool, error) {
 	return true, nil
 }
 
-func (c *Challenger) WaitHello(ctx context.Context, ch net.Conn) error {
+func (c *Challenger) WaitHello(ctx context.Context, ch ReadWriteConn) error {
 
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("timeout befor Hello request: %w", err)
@@ -73,7 +71,7 @@ func (c *Challenger) WaitHello(ctx context.Context, ch net.Conn) error {
 	return nil
 }
 
-func (c *Challenger) SendChallenge(ctx context.Context, ch net.Conn) ([]byte, error) {
+func (c *Challenger) SendChallenge(ctx context.Context, ch ReadWriteConn) ([]byte, error) {
 
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("timeout befor challange: %w", err)
@@ -92,7 +90,7 @@ func (c *Challenger) SendChallenge(ctx context.Context, ch net.Conn) ([]byte, er
 	return challenge, nil
 }
 
-func (c *Challenger) VerifyChallenge(ctx context.Context, ch net.Conn, challenge []byte) error {
+func (c *Challenger) VerifyChallenge(ctx context.Context, ch ReadWriteConn, challenge []byte) error {
 
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("timeout befor verification: %w", err)
