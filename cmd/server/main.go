@@ -13,10 +13,14 @@ import (
 	"syscall"
 )
 
+const (
+	AppName = "POW-SERVER"
+)
+
 func main() {
 
 	if err := StarApp(); err != nil {
-		panic(err)
+		return
 	}
 }
 
@@ -37,7 +41,7 @@ func StarApp() error {
 		Level: slog.LevelDebug,
 	})
 	logger := slog.New(logHandler)
-	logger = logger.With("app", "Challenge server")
+	logger = logger.With("app", AppName)
 	logger.Info("Starting app", "port", cfg.Server.Port)
 
 	//

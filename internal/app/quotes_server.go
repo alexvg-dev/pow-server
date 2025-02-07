@@ -30,12 +30,17 @@ type QuotesApp struct {
 
 func (s *QuotesApp) Start(ctx context.Context) error {
 
-	// TODO: add metrics server
-	tcpServer := infrastructure.NewTcpServer(s.Cfg.Server)
+	//
+	// Starting metrics server (prometheus)
+	//
+	metricsServer := infrastructure.NewMetricsServer(s.Cfg.MetricsPort)
+	s.Logger.Info("Starting metrics server", "port", s.Cfg.MetricsPort)
+	go metricsServer.Start(ctx)
 
 	//
-	// Starting port listening
+	// Starting TCP Challenge server
 	//
+	tcpServer := infrastructure.NewTcpServer(s.Cfg.Server)
 	err := tcpServer.Start(ctx)
 	if err != nil {
 		s.Logger.Error("Waiting for new connections", "err", err)

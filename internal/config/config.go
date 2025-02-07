@@ -12,6 +12,7 @@ type Config struct {
 	Server         ServerConfig `json:"server"`
 	SessionTtlSec  int          `json:"sessionTtlSec" env:"SESSION_TTL_SEC" default:"10"`
 	QuotesFilePath string       `json:"quotesFilePath" env:"QUOTES_FILE_PATH"`
+	MetricsPort    int          `json:"metricsPort" env:"METRICS_PORT" default:"9009"`
 }
 
 type ServerConfig struct {

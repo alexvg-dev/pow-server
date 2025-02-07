@@ -4,5 +4,6 @@
         "maxConnections": 5
     },
     "sessionTtlSec": 5,
+    "metricsPort": 9009,
     "quotesFilePath": "quotes.txt"
 }

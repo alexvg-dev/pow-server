@@ -9,6 +9,10 @@ CONFIG_VARS = \
     SERVER_PORT=${SERVER_PORT} \
     QUOTES_FILE_PATH=${QUOTES_FILE_PATH}
 
+
+lint:
+	golangci-lint run --skip-files "(.*)/pkg/mod/(.*)"
+
 test:
 	go test ./...
 
