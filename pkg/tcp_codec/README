@@ -1,0 +1,6 @@
+# TCP-codec
+
+Implements data-framing over TCP-connection.
+Simple way just adds message len as data prefix.
+
+Protobuf can be also used here for serializing data.

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"pow-server/pkg/pow"
+	"pow-server/pkg/tcp_codec"
 )
 
 const (
@@ -13,10 +14,9 @@ const (
 	Difficulty   = 2 // Количество нулей в начале хэша
 )
 
-func NewChallenger(comAdapter ITcpAdapter) *Challenger {
+func NewChallenger() *Challenger {
 	return &Challenger{
-		ConnAdapter: comAdapter,
-		POW:         pow.NewScryptPow(Difficulty),
+		POW: pow.NewScryptPow(Difficulty),
 	}
 }
 
@@ -61,7 +61,7 @@ func (c *Challenger) WaitHello(ctx context.Context, ch net.Conn) error {
 		return fmt.Errorf("timeout befor Hello request: %w", err)
 	}
 
-	buf, err := c.ConnAdapter.Read(ch)
+	buf, err := tcp_codec.Read(ch)
 	if err != nil {
 		return fmt.Errorf("reading Hello request: %w", err)
 	}
@@ -84,7 +84,7 @@ func (c *Challenger) SendChallenge(ctx context.Context, ch net.Conn) ([]byte, er
 		return nil, fmt.Errorf("failed to generate challenge: %w", err)
 	}
 
-	err = c.ConnAdapter.Write(ch, challenge)
+	err = tcp_codec.Write(ch, challenge)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send challenge: %w", err)
 	}
@@ -98,7 +98,7 @@ func (c *Challenger) VerifyChallenge(ctx context.Context, ch net.Conn, challenge
 		return fmt.Errorf("timeout befor verification: %w", err)
 	}
 
-	response, err := c.ConnAdapter.Read(ch)
+	response, err := tcp_codec.Read(ch)
 	if err != nil {
 		return fmt.Errorf("failed to read response: %w", err)
 	}

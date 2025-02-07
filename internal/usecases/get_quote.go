@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
-	"pow-server/internal/infrastructure"
 	"pow-server/internal/services"
+	"pow-server/pkg/tcp_codec"
 )
 
 type GetQuoteUsecase struct {
@@ -63,8 +63,7 @@ func (u *GetQuoteUsecase) Execute(ctx context.Context, conn net.Conn) error {
 	//
 	// 3. This one can be also extracted out here.
 	//
-	connAdapter := infrastructure.NewTcpAdapter()
-	err = connAdapter.Write(conn, []byte(quote))
+	err = tcp_codec.Write(conn, []byte(quote))
 	if err != nil {
 		return fmt.Errorf("sending quote: %w", err)
 	}

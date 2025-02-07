@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"pow-server/internal/app"
 	"pow-server/internal/config"
-	"pow-server/internal/infrastructure"
 	"pow-server/internal/repository"
 	"pow-server/internal/services"
 	"pow-server/internal/usecases"
@@ -44,8 +43,7 @@ func StarApp() error {
 	//
 	// 3. Building server
 	//
-	connAdapter := infrastructure.NewTcpAdapter()
-	challenger := services.NewChallenger(connAdapter)
+	challenger := services.NewChallenger()
 	quoteRepo := repository.NewQuotesRepo(cfg.QuotesFilePath)
 	quoteProvider := services.NewQuoteProvider(quoteRepo)
 	usecase := usecases.NewGetQuoteUsecase(challenger, quoteProvider, logger)

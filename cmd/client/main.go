@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"pow-server/internal/infrastructure"
 	"pow-server/pkg/pow"
 	"pow-server/pkg/quotes_client"
 	"sync"
@@ -33,6 +32,10 @@ func main() {
 	wg := sync.WaitGroup{}
 	wg.Add(ClientsNumber)
 
+	//
+	// Starting multiple clients to check possible
+	//	concurrency problems
+	//
 	for i := 0; i < ClientsNumber; i++ {
 		go func() {
 			defer wg.Done()
@@ -41,8 +44,7 @@ func main() {
 			logger.Info("Starting client", "num", i)
 
 			powSolver := pow.NewScryptPow(PoWDifficulty)
-			tcpAdapter := infrastructure.NewTcpAdapter()
-			client := quotes_client.NewClient(serverAddress, powSolver, tcpAdapter)
+			client := quotes_client.NewClient(serverAddress, powSolver)
 
 			logger.Info("Fetching quote")
 
@@ -60,6 +62,8 @@ func main() {
 }
 
 func printUsage() {
+	fmt.Println("")
 	fmt.Println("Usage: ./client <server_address:port>")
 	fmt.Println("Example: ./client localhost:4444")
+	fmt.Println("")
 }

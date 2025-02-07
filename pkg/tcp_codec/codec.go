@@ -1,4 +1,4 @@
-package infrastructure
+package tcp_codec
 
 import (
 	"encoding/binary"
@@ -6,21 +6,15 @@ import (
 	"net"
 )
 
-type TcpAdapter struct {
-}
+func Write(ch net.Conn, data []byte) error {
 
-func NewTcpAdapter() TcpAdapter {
-	return TcpAdapter{}
-}
-
-func (tcp TcpAdapter) Write(ch net.Conn, data []byte) error {
-
+	// write len
 	err := binary.Write(ch, binary.BigEndian, uint64(len(data)))
 	if err != nil {
 		return fmt.Errorf("failed to send message size: %w", err)
 	}
 
-	// Отправляем само сообщение
+	// write msg
 	_, err = ch.Write(data)
 	if err != nil {
 		return fmt.Errorf("failed to send message: %w", err)
@@ -29,14 +23,16 @@ func (tcp TcpAdapter) Write(ch net.Conn, data []byte) error {
 	return nil
 }
 
-func (tcp TcpAdapter) Read(ch net.Conn) ([]byte, error) {
+func Read(ch net.Conn) ([]byte, error) {
+
+	// read msg len
 	var length uint64
 	err := binary.Read(ch, binary.BigEndian, &length)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read message size: %w", err)
 	}
 
-	// Читаем само сообщение
+	// read msg
 	data := make([]byte, length)
 	_, err = ch.Read(data)
 	if err != nil {

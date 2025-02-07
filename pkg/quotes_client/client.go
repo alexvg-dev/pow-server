@@ -3,7 +3,7 @@ package quotes_client
 import (
 	"errors"
 	"net"
-	"pow-server/internal/infrastructure"
+	"pow-server/pkg/tcp_codec"
 )
 
 var (
@@ -14,11 +14,10 @@ var (
 	ErrReadQuote     = errors.New("can`t read quote from server")
 )
 
-func NewClient(addr string, powSolver PowSolver, adapter infrastructure.TcpAdapter) *Client {
+func NewClient(addr string, powSolver PowSolver) *Client {
 	return &Client{
-		Addr:             addr,
-		PowSolver:        powSolver,
-		TransportAdapter: adapter,
+		Addr:      addr,
+		PowSolver: powSolver,
 	}
 }
 
@@ -27,41 +26,54 @@ type PowSolver interface {
 }
 
 type Client struct {
-	Addr             string
-	PowSolver        PowSolver
-	TransportAdapter infrastructure.TcpAdapter
+	Addr      string
+	PowSolver PowSolver
 }
 
 func (c *Client) GetQuote() (string, error) {
 
+	//
+	// Connecting to server
+	//
 	conn, err := net.Dial("tcp", c.Addr)
 	if err != nil {
 		return "", ErrConnect
 	}
 	defer conn.Close()
 
-	err = c.TransportAdapter.Write(conn, []byte("Hello"))
+	//
+	// Sending Hello request
+	//
+	err = tcp_codec.Write(conn, []byte("Hello"))
 	if err != nil {
 		return "", ErrSendHello
 	}
 
-	// Читаем challenge от сервера
-	buf, err := c.TransportAdapter.Read(conn)
+	//
+	// Read challenge
+	//
+	buf, err := tcp_codec.Read(conn)
 	if err != nil {
 		return "", ErrReadChallenge
 	}
 
-	// Генерируем ответ на challenge
+	//
+	// Solving challenge
+	//
 	response, err := c.PowSolver.SolveChallenge(buf)
 
-	// Отправляем ответ на challenge
-	err = c.TransportAdapter.Write(conn, response)
+	//
+	// Send solution to server
+	//
+	err = tcp_codec.Write(conn, response)
 	if err != nil {
 		return "", ErrSendSolution
 	}
 
-	// Читаем ответ от сервера
-	buf, err = c.TransportAdapter.Read(conn)
+	//
+	// Reading quote
+	//
+	buf, err = tcp_codec.Read(conn)
 	if err != nil {
 		return "", ErrReadQuote
 	}
