@@ -2,8 +2,11 @@ package quotes_client
 
 import (
 	"errors"
-	"net"
-	"pow-server/pkg/tcp_codec"
+	"fmt"
+)
+
+const (
+	ConnectionRetriesCount = 3
 )
 
 var (
@@ -35,48 +38,51 @@ func (c *Client) GetQuote() (string, error) {
 	//
 	// Connecting to server
 	//
-	conn, err := net.Dial("tcp", c.Addr)
+	conn, err := NewTCPConnection(c.Addr, ConnectionRetriesCount)
 	if err != nil {
-		return "", ErrConnect
+		return "", err
 	}
 	defer conn.Close()
 
 	//
 	// Sending Hello request
 	//
-	err = tcp_codec.Write(conn, []byte("Hello"))
+	err = conn.Write([]byte("Hello"))
 	if err != nil {
-		return "", ErrSendHello
+		return "", fmt.Errorf("send hello: %w", ErrSendHello)
 	}
 
 	//
 	// Read challenge
 	//
-	buf, err := tcp_codec.Read(conn)
+	challenge, err := conn.Read()
 	if err != nil {
-		return "", ErrReadChallenge
+		return "", fmt.Errorf("read challenge: %w", ErrReadChallenge)
 	}
 
 	//
 	// Solving challenge
 	//
-	response, err := c.PowSolver.SolveChallenge(buf)
+	solution, err := c.PowSolver.SolveChallenge(challenge)
+	if err != nil {
+		return "", fmt.Errorf("solve challenge: %w", err)
+	}
 
 	//
 	// Send solution to server
 	//
-	err = tcp_codec.Write(conn, response)
+	err = conn.Write(solution)
 	if err != nil {
-		return "", ErrSendSolution
+		return "", fmt.Errorf("send solution: %w", ErrSendSolution)
 	}
 
 	//
 	// Reading quote
 	//
-	buf, err = tcp_codec.Read(conn)
+	quote, err := conn.Read()
 	if err != nil {
-		return "", ErrReadQuote
+		return "", fmt.Errorf("read quote: %w", ErrReadQuote)
 	}
 
-	return string(buf), nil
+	return string(quote), nil
 }

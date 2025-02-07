@@ -37,11 +37,11 @@ func main() {
 	//	concurrency problems
 	//
 	for i := 0; i < ClientsNumber; i++ {
-		go func() {
+		go func(clientID int) {
 			defer wg.Done()
 
-			logger = logger.With("ClientNum", i)
-			logger.Info("Starting client", "num", i)
+			logger = logger.With("ClientNum", clientID)
+			logger.Info("Starting client", "num", clientID)
 
 			powSolver := pow.NewScryptPow(PoWDifficulty)
 			client := quotes_client.NewClient(serverAddress, powSolver)
@@ -55,7 +55,7 @@ func main() {
 			}
 
 			logger.Info("Got quote", "quote", quote)
-		}()
+		}(i)
 	}
 
 	wg.Wait()
